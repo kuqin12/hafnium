@@ -582,6 +582,10 @@ static enum manifest_return_code check_partition_memory_is_valid(
 	within_ranges = is_memory_region_within_ranges(
 		base_address, page_count, ranges_from_manifest, ranges_count);
 
+	if (!within_ranges) {
+		dump_memory_ranges(ranges_from_manifest, ranges_count, !is_secure_region);
+	}
+
 	return within_ranges ? MANIFEST_SUCCESS : error_return;
 }
 
@@ -623,6 +627,8 @@ static enum manifest_return_code check_and_record_memory_used(
 
 		return MANIFEST_SUCCESS;
 	}
+
+	dump_memory_ranges(manifest_data->mem_regions, (*mem_regions_index), false);
 
 	return MANIFEST_ERROR_MEM_REGION_OVERLAP;
 }
@@ -1473,7 +1479,7 @@ static enum manifest_return_code parse_ffa_partition_package(
 
 	if (vm_id != HF_PRIMARY_VM_ID &&
 	    sp_pkg_get_mem_size(&header) >= vm->secondary.mem_size) {
-		dlog_error("Invalid package header or DT size.\n");
+		dlog_error("Invalid package header or DT size. %x, %x, %lx, %lx\n", vm_id, HF_PRIMARY_VM_ID, sp_pkg_get_mem_size(&header), vm->secondary.mem_size);
 		goto out;
 	}
 

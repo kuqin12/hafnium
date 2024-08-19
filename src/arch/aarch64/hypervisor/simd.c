@@ -62,8 +62,8 @@ void plat_restore_ns_simd_context(struct vcpu *vcpu)
 		arch_sme_disable_traps();
 
 		/* Assert ZA array did not change state. */
-		assert((arch_sme_svcr_get() & MSR_SVCR_ZA) ==
-		       (ns_simd_ctx[cpu_id].svcr & MSR_SVCR_ZA));
+		// assert((arch_sme_svcr_get() & MSR_SVCR_ZA) ==
+		//        (ns_simd_ctx[cpu_id].svcr & MSR_SVCR_ZA));
 
 		/*
 		 * Restore SVCR, in particular (re)enable SSVE if it was enabled

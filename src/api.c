@@ -4636,6 +4636,8 @@ struct ffa_value api_ffa_mem_perm_get(vaddr_t base_addr, struct vcpu *current)
 		goto out;
 	}
 
+	dlog_verbose("api_ffa_mem_perm_get: base 0x%lx mode: 0x%x \n", va_addr(base_addr), mode);
+
 	/* No memory should be marked RWX */
 	CHECK((mode & (MM_MODE_R | MM_MODE_W | MM_MODE_X)) !=
 	      (MM_MODE_R | MM_MODE_W | MM_MODE_X));
@@ -4673,6 +4675,8 @@ struct ffa_value api_ffa_mem_perm_set(vaddr_t base_addr, uint32_t page_count,
 	uint32_t original_mode;
 	uint32_t new_mode;
 	struct mpool local_page_pool;
+
+	dlog_verbose("api_ffa_mem_perm_set: base 0x%lx page_count: 0x%x mem_perm: 0x%x \n", va_addr(base_addr), page_count, mem_perm);
 
 	if (!plat_ffa_is_mem_perm_set_valid(current)) {
 		return ffa_error(FFA_DENIED);
@@ -4714,13 +4718,16 @@ struct ffa_value api_ffa_mem_perm_set(vaddr_t base_addr, uint32_t page_count,
 	 * MM_MODE_INVALID set.
 	 */
 
+	original_mode = 0;
 	mode_ret = mm_get_mode(&vm_locked.vm->ptable, base_addr,
 			       va_add(base_addr, page_count * PAGE_SIZE),
 			       &original_mode);
 	if (!mode_ret || (original_mode & MM_MODE_INVALID)) {
+		dlog_verbose("api_ffa_mem_perm_set: INVALID! %d - 0x%x\n", mode_ret, original_mode);
 		ret = ffa_error(FFA_INVALID_PARAMETERS);
 		goto out;
 	}
+	dlog_verbose("api_ffa_mem_perm_set: original mode 0x%x \n", original_mode);
 
 	/* Device memory cannot be marked as executable */
 	if ((original_mode & MM_MODE_D) && (mem_perm == FFA_MEM_PERM_RX)) {
