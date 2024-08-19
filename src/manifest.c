@@ -583,6 +583,10 @@ static enum manifest_return_code check_partition_memory_is_valid(
 	within_ranges = is_memory_region_within_ranges(
 		base_address, page_count, ranges_from_manifest, ranges_count);
 
+	if (!within_ranges) {
+		dump_memory_ranges(ranges_from_manifest, ranges_count, !is_secure_region);
+	}
+
 	return within_ranges ? MANIFEST_SUCCESS : error_return;
 }
 
