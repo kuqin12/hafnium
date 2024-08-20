@@ -7,7 +7,7 @@ docs/build
 # When these are checked out using a `repo` manifest Git otherwise treats them
 # as untracked files and the repository as dirty.
 !project/
-project/*/
+# project/*/
 !project/reference/
 
 # Ctags
