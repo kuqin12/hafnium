@@ -69,9 +69,12 @@ static bool partition_pkg_from_sp_pkg(struct mm_stage1_locked stage1_locked,
 
 	dump_partition_package(pkg);
 
-	/* Map the whole package as RO. */
-	CHECK(mm_identity_map(stage1_locked, pkg->total.begin, pkg->total.end,
-			      MM_MODE_R, ppool) != NULL);
+	if (ret) {
+		/* Map the whole package as RO. */
+		CHECK(mm_identity_map(stage1_locked, pkg->total.begin,
+				      pkg->total.end, MM_MODE_R,
+				      ppool) != NULL);
+	}
 
 	return ret;
 }
