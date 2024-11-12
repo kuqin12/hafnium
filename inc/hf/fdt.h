@@ -55,3 +55,7 @@ bool fdt_read_property(const struct fdt_node *node, const char *name,
 bool fdt_read_number(const struct fdt_node *node, const char *name,
 		     uint64_t *val);
 bool fdt_parse_number(struct memiter *data, size_t size, uint64_t *val);
+int fdt_read_uint32(const void *dtb, int node, const char *prop_name,
+		    uint32_t *value);
+int fdt_read_uint64(const void *dtb, int node, const char *prop_name,
+		    uint64_t *value);
