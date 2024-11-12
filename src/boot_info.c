@@ -345,6 +345,7 @@ bool ffa_boot_info_node(
 		(boot_info_size -
 		 offsetof(struct ffa_boot_info_header, boot_info)) /
 		sizeof(struct ffa_boot_info_desc);
+	struct efi_hob_handoff_info_table *ret;
 
 	assert(boot_info_node != NULL);
 	assert(pkg_header != NULL);
@@ -378,24 +379,40 @@ bool ffa_boot_info_node(
 		uintpaddr_t hob_address;
 		size_t size;
 
-		build_sp_boot_hob_list(
+		ret = build_sp_boot_hob_list(
 			stage1_locked,
 			(void*)ipa_addr(manifest_address),
 			&hob_address,
 			&size,
 			ppool);
 
-		boot_info_write_desc(
-			boot_info_header,
-			FFA_BOOT_INFO_FLAG_CONTENT_FORMAT_ADDR, true,
-			FFA_BOOT_INFO_TYPE_ID_HOB, pkg_header->pm_size,
-			hob_address, max_boot_info_desc_count);
+		if (ret != NULL) {
+			dlog_verbose("    FF-A Creating Hobs\n");
+			boot_info_write_desc(
+				boot_info_header,
+				FFA_BOOT_INFO_FLAG_CONTENT_FORMAT_ADDR, true,
+				FFA_BOOT_INFO_TYPE_ID_HOB, pkg_header->pm_size,
+				hob_address, max_boot_info_desc_count);
 
-		/*
-		 * Incrementing the size of the boot information blob with the
-		 * size of the partition's manifest.
-		 */
-		boot_info_header->info_blob_size += size;
+			/*
+			* Incrementing the size of the boot information blob with the
+			* size of the partition's manifest.
+			*/
+			boot_info_header->info_blob_size += size;
+		} else {
+			dlog_verbose("    FF-A Reusing Manifest\n");
+			boot_info_write_desc(
+				boot_info_header,
+				FFA_BOOT_INFO_FLAG_CONTENT_FORMAT_ADDR, true,
+				FFA_BOOT_INFO_TYPE_ID_FDT, pkg_header->pm_size,
+				ipa_addr(manifest_address), max_boot_info_desc_count);
+
+			/*
+			* Incrementing the size of the boot information blob with the
+			* size of the partition's manifest.
+			*/
+			boot_info_header->info_blob_size += pkg_header->pm_size;
+		}
 
 		/*
 		 * Flush the data cache in case partition initializes with
