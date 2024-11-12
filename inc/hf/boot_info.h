@@ -13,7 +13,9 @@
 #include "hf/sp_pkg.h"
 
 #define FFA_BOOT_INFO_SIG 0xFFAU
-#define FFA_BOOT_INFO_VERSION 0x10001U
+#define FFA_BOOT_INFO_VERSION 0x10002U
 
-bool ffa_boot_info_node(struct fdt_node *boot_info_node, vaddr_t pkg_address,
-			struct sp_pkg_header *pkg_header);
+bool ffa_boot_info_node(
+	struct mm_stage1_locked stage1_locked,
+	struct fdt_node *boot_info_node, vaddr_t pkg_address,
+			struct sp_pkg_header *pkg_header, struct mpool *ppool);
