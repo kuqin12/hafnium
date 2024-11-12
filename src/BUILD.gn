@@ -54,6 +54,7 @@ source_set("src_testable") {
     "manifest.c",
     "sp_pkg.c",
     "vcpu.c",
+    "hob.c"
   ]
 
   deps = [
@@ -70,6 +71,7 @@ source_set("src_testable") {
     "//src/arch/${plat_arch}/hypervisor",
     "//src/arch/${plat_arch}/hypervisor:other_world",
     "//vmlib",
+    "//third_party/dtc:libfdt",
     plat_boot_flow,
     plat_console,
     plat_iommu,
