@@ -6,7 +6,9 @@
  * https://opensource.org/licenses/BSD-3-Clause.
  */
 
+#include "hf/assert.h"
 #include "hf/fdt.h"
+#include "hf/dlog.h"
 
 #include <libfdt.h>
 
@@ -275,4 +277,62 @@ bool fdt_is_compatible(struct fdt_node *node, const char *compat)
 {
 	return fdt_node_check_compatible(fdt_base(&node->fdt), node->offset,
 					 compat) == 0;
+}
+/* Number of cells, given total length in bytes. Each cell is 4 bytes long */
+#define NCELLS(len) ((len) / 4U)
+/*
+ * Read cells from a given property of the given node. Any number of 32-bit
+ * cells of the property can be read. Returns 0 on success, or a negative
+ * FDT error value otherwise.
+ */
+int fdt_read_uint32_array(const void *dtb, int node, const char *prop_name,
+			  unsigned int cells, uint32_t *value)
+{
+	const fdt32_t *prop;
+	int value_len;
+
+	assert(dtb != NULL);
+	assert(prop_name != NULL);
+	assert(value != NULL);
+	assert(node >= 0);
+
+	/* Access property and obtain its length (in bytes) */
+	prop = fdt_getprop(dtb, node, prop_name, &value_len);
+	if (prop == NULL) {
+		dlog_verbose("Couldn't find property %s in dtb\n", prop_name);
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	/* Verify that property length can fill the entire array. */
+	if (NCELLS((unsigned int)value_len) < cells) {
+		dlog_warning("Property length mismatch\n");
+		return -FDT_ERR_BADVALUE;
+	}
+
+	for (unsigned int i = 0U; i < cells; i++) {
+		value[i] = fdt32_to_cpu(prop[i]);
+	}
+
+	return 0;
+}
+
+int fdt_read_uint32(const void *dtb, int node, const char *prop_name,
+		    uint32_t *value)
+{
+	return fdt_read_uint32_array(dtb, node, prop_name, 1, value);
+}
+
+int fdt_read_uint64(const void *dtb, int node, const char *prop_name,
+		    uint64_t *value)
+{
+	uint32_t array[2] = {0, 0};
+	int ret;
+
+	ret = fdt_read_uint32_array(dtb, node, prop_name, 2, array);
+	if (ret < 0) {
+		return ret;
+	}
+
+	*value = ((uint64_t)array[0] << 32) | array[1];
+	return 0;
 }
