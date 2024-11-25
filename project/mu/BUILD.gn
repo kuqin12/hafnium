@@ -7,44 +7,13 @@
 import("//build/toolchain/embedded.gni")
 import("//build/toolchain/host.gni")
 
-group("aem_v8a_fvp_vhe") {
-  deps = [ "//src:hafnium(:aem_v8a_fvp_vhe_clang)" ]
-}
-
-group("qemu_aarch64_vhe") {
-  deps = [ "//src:hafnium(:qemu_aarch64_vhe_clang)" ]
-}
-
-group("secure_aem_v8a_fvp_vhe") {
-  deps = [ "//src:hafnium(:secure_aem_v8a_fvp_vhe_clang)" ]
-}
-
 group("secure_qemu_aarch64") {
   deps = [ "//src:hafnium(:secure_qemu_aarch64_clang)" ]
 }
 
-group("secure_tc") {
-  deps = [ "//src:hafnium(:secure_tc_clang)" ]
-}
-
-group("secure_rd_fremont") {
-  deps = [ "//src:hafnium(:secure_rd_fremont_clang)" ]
-}
-
-group("secure_rd_fremont_cfg1") {
-  deps = [ "//src:hafnium(:secure_rd_fremont_cfg1_clang)" ]
-}
-
 group("root") {
   deps = [
-    ":aem_v8a_fvp_vhe",
-    ":qemu_aarch64_vhe",
-    ":secure_aem_v8a_fvp_vhe",
     ":secure_qemu_aarch64",
-    ":secure_rd_fremont",
-    ":secure_rd_fremont_cfg1",
-    ":secure_tc",
-    "//src/arch/aarch64/qemuloader:bl(:qemu_aarch64_vhe_clang)",
   ]
 }
 
@@ -53,13 +22,6 @@ group("test_root") {
 
   deps = [
     "//src:unit_tests(:host_fake_clang)",
-    "//test/arch(:aem_v8a_fvp_vhe_clang)",
-    "//test/arch(:qemu_aarch64_vhe_clang)",
-    "//test/vmapi:partitions(:secure_aem_v8a_fvp_vhe_vm_clang)",
-    "//test/vmapi(:aem_v8a_fvp_vhe_vm_clang)",
-    "//test/vmapi(:qemu_aarch64_vhe_vm_clang)",
-    "//test/vmapi/arch/aarch64/gicv3:gicv3_test(:aem_v8a_fvp_vhe_vm_clang)",
-    "//test/vmapi/arch/aarch64/gicv3:gicv3_test(:qemu_aarch64_vhe_vm_clang)",
   ]
 }
 
@@ -70,140 +32,6 @@ host_toolchain("host_fake") {
   heap_pages = 60
   max_cpus = 4
   max_vms = 6
-}
-
-# RD (Reference Design) is a collection of resources to provide a representative
-# view of typical compute subsystems that can be designed and implemented using
-# specific generations of Arm IP. RD-Fremont is the first RD platform with Realm
-# Management Extension (RME) support.
-# For more information please refer:
-# https://neoverse-reference-design.docs.arm.com/en/latest/platforms/rdfremont/readme.html
-aarch64_toolchains("secure_rd_fremont") {
-  cpu = "cortex-a57"
-  origin_address = "0xF9000000"
-  boot_flow = "//src/boot_flow:spmc"
-  console = "//src/arch/aarch64/pl011"
-  iommu = "//src/iommu:absent"
-  memory_protect = "//src/arch/aarch64/memory_protect:memory_protect"
-  gic_version = 4
-  gicd_base_address = "0x30000000"
-  gicr_base_address = "0x301C0000"
-  gicr_frames = 16
-  heap_pages = 180
-  max_cpus = 16
-  max_vms = 16
-  toolchain_args = {
-    plat_ffa = "//src/arch/aarch64/plat/ffa:spmc"
-    plat_psci = "//src/arch/aarch64/plat/psci:spmc"
-    plat_interrupts = "//src/arch/aarch64/plat/interrupts:gicv3"
-    secure_world = "1"
-    pl011_base_address = "0x2A410000"
-    enable_mte = "1"
-    plat_log_level = "LOG_LEVEL_INFO"
-    plat_num_virtual_interrupts_ids = 1024
-  }
-}
-
-aarch64_toolchains("secure_rd_fremont_cfg1") {
-  cpu = "cortex-a57"
-  origin_address = "0xF9000000"
-  boot_flow = "//src/boot_flow:spmc"
-  console = "//src/arch/aarch64/pl011"
-  iommu = "//src/iommu:absent"
-  memory_protect = "//src/arch/aarch64/memory_protect:memory_protect"
-  gic_version = 4
-  gicd_base_address = "0x30000000"
-  gicr_base_address = "0x30100000"
-  gicr_frames = 8
-  heap_pages = 180
-  max_cpus = 8
-  max_vms = 8
-  toolchain_args = {
-    plat_ffa = "//src/arch/aarch64/plat/ffa:spmc"
-    plat_psci = "//src/arch/aarch64/plat/psci:spmc"
-    plat_interrupts = "//src/arch/aarch64/plat/interrupts:gicv3"
-    secure_world = "1"
-    pl011_base_address = "0x2A410000"
-    enable_mte = "1"
-    plat_log_level = "LOG_LEVEL_INFO"
-    plat_num_virtual_interrupts_ids = 1024
-  }
-}
-
-aarch64_toolchains("secure_aem_v8a_fvp_vhe") {
-  cpu = "cortex-a57"
-  origin_address = "0x06000000"
-  boot_flow = "//src/boot_flow:spmc"
-  console = "//src/arch/aarch64/pl011"
-  iommu = "//src/arch/aarch64/arm_smmuv3"
-  memory_protect = "//src/arch/aarch64/memory_protect:memory_protect"
-  gic_version = 3
-  gic_enable_espi = 1
-  gicd_base_address = "0x2f000000"
-  gicr_base_address = "0x2f100000"
-  gicr_frames = 8
-  heap_pages = 180
-  max_cpus = 8
-  max_vms = 16
-  branch_protection = "standard"
-  toolchain_args = {
-    plat_ffa = "//src/arch/aarch64/plat/ffa:spmc"
-    plat_psci = "//src/arch/aarch64/plat/psci:spmc"
-    plat_interrupts = "//src/arch/aarch64/plat/interrupts:gicv3"
-    secure_world = "1"
-    pl011_base_address = "0x1c090000"
-    smmu_base_address = "0x2b400000"
-    smmu_memory_size = "0x100000"
-    enable_mte = "1"
-    plat_log_level = "LOG_LEVEL_INFO"
-    plat_num_virtual_interrupts_ids = 5120
-    plat_partition_max_dma_devices = 1
-  }
-}
-
-aarch64_toolchains("aem_v8a_fvp_vhe") {
-  cpu = "cortex-a57"
-  origin_address = "0x80000000"
-  boot_flow = "//src/boot_flow:linux"
-  memory_protect = "//src/memory_protect:absent"
-  console = "//src/arch/aarch64/pl011"
-  iommu = "//src/arch/aarch64/arm_smmuv3"
-  gic_version = 3
-  gicd_base_address = "0x2f000000"
-  gicr_base_address = "0x2f100000"
-  gicr_frames = 8
-  heap_pages = 180
-  max_cpus = 8
-  max_vms = 16
-  branch_protection = "standard"
-  toolchain_args = {
-    plat_ffa = "//src/arch/aarch64/plat/ffa:hypervisor"
-    pl011_base_address = "0x1c090000"
-    smmu_base_address = "0x2b400000"
-    smmu_memory_size = "0x100000"
-    plat_log_level = "LOG_LEVEL_INFO"
-  }
-}
-
-aarch64_toolchains("qemu_aarch64_vhe") {
-  cpu = "cortex-a57"
-  origin_address = "0x40001000"
-  boot_flow = "//src/boot_flow:linux"
-  console = "//src/arch/aarch64/pl011"
-  iommu = "//src/iommu:absent"
-  memory_protect = "//src/memory_protect:absent"
-  gic_version = 3
-  gicd_base_address = "0x08000000"
-  gicr_base_address = "0x080A0000"
-  gicr_frames = 8
-  heap_pages = 180
-  max_cpus = 8
-  max_vms = 16
-  toolchain_args = {
-    plat_ffa = "//src/arch/aarch64/plat/ffa:hypervisor"
-    pl011_base_address = "0x09000000"
-    plat_log_level = "LOG_LEVEL_INFO"
-  }
 }
 
 aarch64_toolchains("secure_qemu_aarch64") {
@@ -226,38 +54,7 @@ aarch64_toolchains("secure_qemu_aarch64") {
     plat_interrupts = "//src/arch/aarch64/plat/interrupts:gicv3"
     secure_world = "1"
     pl011_base_address = "0x60000000"
-    hftest_ctrl = "//test/hftest:ctrl_uart"
     plat_log_level = "LOG_LEVEL_VERBOSE"
-    plat_num_virtual_interrupts_ids = 1024
-  }
-}
-
-# The Total Compute platform provides an envelope for Arm's latest client IPs.
-# Release notes and user manual for the open source software stack targeting
-# the Total Compute Fixed Virtual Platform (FVP) are found here:
-# https://totalcompute.docs.arm.com/en/latest/
-aarch64_toolchains("secure_tc") {
-  cpu = "cortex-a57"
-  origin_address = "0xfd000000"
-  boot_flow = "//src/boot_flow:spmc"
-  console = "//src/arch/aarch64/pl011"
-  iommu = "//src/iommu:absent"
-  memory_protect = "//src/memory_protect:absent"
-  gic_version = 4
-  gicd_base_address = "0x30000000"
-  gicr_base_address = "0x30080000"
-  gicr_frames = 8
-  heap_pages = 180
-  max_cpus = 8
-  max_vms = 16
-  toolchain_args = {
-    plat_ffa = "//src/arch/aarch64/plat/ffa:spmc"
-    plat_psci = "//src/arch/aarch64/plat/psci:spmc"
-    plat_interrupts = "//src/arch/aarch64/plat/interrupts:gicv3"
-    secure_world = "1"
-    pl011_base_address = "0x2A410000"
-    enable_mte = "1"
-    plat_log_level = "LOG_LEVEL_INFO"
     plat_num_virtual_interrupts_ids = 1024
   }
 }
