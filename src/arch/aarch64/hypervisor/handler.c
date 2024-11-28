@@ -1234,6 +1234,187 @@ noreturn struct vcpu *serr_lower(void)
 	panic("SError from a lower exception level.");
 }
 
+// MU_CHANGE Starts: Port over the exception handling code from the UEFI AArch64
+// DefaultExceptionHandler.
+static void describe_ins_data_abort (
+  char  *AbortType,
+  uintreg_t  Iss
+  )
+{
+  char  *AbortCause;
+
+  switch (Iss & 0x3f) {
+    case 0x0: AbortCause = "Address size fault, zeroth level of translation or translation table base register";
+      break;
+    case 0x1: AbortCause = "Address size fault, first level";
+      break;
+    case 0x2: AbortCause = "Address size fault, second level";
+      break;
+    case 0x3: AbortCause = "Address size fault, third level";
+      break;
+    case 0x4: AbortCause = "Translation fault, zeroth level";
+      break;
+    case 0x5: AbortCause = "Translation fault, first level";
+      break;
+    case 0x6: AbortCause = "Translation fault, second level";
+      break;
+    case 0x7: AbortCause = "Translation fault, third level";
+      break;
+    case 0x9: AbortCause = "Access flag fault, first level";
+      break;
+    case 0xa: AbortCause = "Access flag fault, second level";
+      break;
+    case 0xb: AbortCause = "Access flag fault, third level";
+      break;
+    case 0xd: AbortCause = "Permission fault, first level";
+      break;
+    case 0xe: AbortCause = "Permission fault, second level";
+      break;
+    case 0xf: AbortCause = "Permission fault, third level";
+      break;
+    case 0x10: AbortCause = "Synchronous external abort";
+      break;
+    case 0x18: AbortCause = "Synchronous parity error on memory access";
+      break;
+    case 0x11: AbortCause = "Asynchronous external abort";
+      break;
+    case 0x19: AbortCause = "Asynchronous parity error on memory access";
+      break;
+    case 0x14: AbortCause = "Synchronous external abort on translation table walk, zeroth level";
+      break;
+    case 0x15: AbortCause = "Synchronous external abort on translation table walk, first level";
+      break;
+    case 0x16: AbortCause = "Synchronous external abort on translation table walk, second level";
+      break;
+    case 0x17: AbortCause = "Synchronous external abort on translation table walk, third level";
+      break;
+    case 0x1c: AbortCause = "Synchronous parity error on memory access on translation table walk, zeroth level";
+      break;
+    case 0x1d: AbortCause = "Synchronous parity error on memory access on translation table walk, first level";
+      break;
+    case 0x1e: AbortCause = "Synchronous parity error on memory access on translation table walk, second level";
+      break;
+    case 0x1f: AbortCause = "Synchronous parity error on memory access on translation table walk, third level";
+      break;
+    case 0x21: AbortCause = "Alignment fault";
+      break;
+    case 0x22: AbortCause = "Debug event";
+      break;
+    case 0x30: AbortCause = "TLB conflict abort";
+      break;
+    case 0x33:
+    case 0x34: AbortCause = "IMPLEMENTATION DEFINED";
+      break;
+    case 0x35:
+    case 0x36: AbortCause = "Domain fault";
+      break;
+    default: AbortCause = "";
+      break;
+  }
+
+  dlog_error("\n%s: %s\n", AbortType, AbortCause);
+}
+
+static void describe_exception_syndrome (
+  uint32_t esr
+  )
+{
+  char  *Message;
+  uintreg_t  Ec;
+  uintreg_t  Iss;
+
+  Ec  = esr >> 26;
+  Iss = esr & 0x00ffffff;
+
+  switch (Ec) {
+    case 0x15: Message = "SVC executed in AArch64";
+      break;
+    case 0x20:
+    case 0x21: describe_ins_data_abort ("Instruction abort", Iss);
+      return;
+    case 0x22: Message = "PC alignment fault";
+      break;
+    case 0x23: Message = "SP alignment fault";
+      break;
+    case 0x24:
+    case 0x25: describe_ins_data_abort ("Data abort", Iss);
+      return;
+    default: return;
+  }
+
+  dlog_error("\n %s \n", Message);
+}
+
+static void better_lower_exception_dumper (uintreg_t esr,
+	const struct vcpu *vcpu)
+{
+	static bool m_recursive_error = false;
+	int32_t Offset;
+
+	if (m_recursive_error) {
+		dlog_error("\nRecursive exception occurred while dumping the CPU state\n");
+		return;
+	}
+
+	m_recursive_error = true;
+
+	dlog_error("\n");
+	dlog_error("\n");
+	dlog_error("Exception from lower EL at 0x%016lx\n", vcpu->regs.pc);
+	dlog_error("\n");
+  dlog_error("  X0 0x%016lx   X1 0x%016lx   X2 0x%016lx   X3 0x%016lx\n", vcpu->regs.r[0], vcpu->regs.r[1], vcpu->regs.r[2], vcpu->regs.r[3]);
+  dlog_error("  X4 0x%016lx   X5 0x%016lx   X6 0x%016lx   X7 0x%016lx\n", vcpu->regs.r[4], vcpu->regs.r[5], vcpu->regs.r[6], vcpu->regs.r[7]);
+  dlog_error("  X8 0x%016lx   X9 0x%016lx  X10 0x%016lx  X11 0x%016lx\n", vcpu->regs.r[8], vcpu->regs.r[9], vcpu->regs.r[10], vcpu->regs.r[11]);
+  dlog_error(" X12 0x%016lx  X13 0x%016lx  X14 0x%016lx  X15 0x%016lx\n", vcpu->regs.r[12], vcpu->regs.r[13], vcpu->regs.r[14], vcpu->regs.r[15]);
+  dlog_error(" X16 0x%016lx  X17 0x%016lx  X18 0x%016lx  X19 0x%016lx\n", vcpu->regs.r[16], vcpu->regs.r[17], vcpu->regs.r[18], vcpu->regs.r[19]);
+  dlog_error(" X20 0x%016lx  X21 0x%016lx  X22 0x%016lx  X23 0x%016lx\n", vcpu->regs.r[20], vcpu->regs.r[21], vcpu->regs.r[22], vcpu->regs.r[23]);
+  dlog_error(" X24 0x%016lx  X25 0x%016lx  X26 0x%016lx  X27 0x%016lx\n", vcpu->regs.r[24], vcpu->regs.r[25], vcpu->regs.r[26], vcpu->regs.r[27]);
+  dlog_error(" X28 0x%016lx   FP 0x%016lx   LR 0x%016lx  \n", vcpu->regs.r[28], vcpu->regs.r[29], vcpu->regs.r[30]);
+
+  /* We save these as 128bit numbers, but have to print them as two 64bit numbers,
+     so swap the 64bit words to correctly represent a 128bit number.  */
+	dlog_error("\n");
+  dlog_error("  V0 0x%016lx %016lx   V1 0x%016lx %016lx\n", vcpu->regs.fp[0].high, vcpu->regs.fp[0].low, vcpu->regs.fp[1].high, vcpu->regs.fp[1].low);
+  dlog_error("  V2 0x%016lx %016lx   V3 0x%016lx %016lx\n", vcpu->regs.fp[2].high, vcpu->regs.fp[2].low, vcpu->regs.fp[3].high, vcpu->regs.fp[3].low);
+  dlog_error("  V4 0x%016lx %016lx   V5 0x%016lx %016lx\n", vcpu->regs.fp[4].high, vcpu->regs.fp[4].low, vcpu->regs.fp[5].high, vcpu->regs.fp[5].low);
+  dlog_error("  V6 0x%016lx %016lx   V7 0x%016lx %016lx\n", vcpu->regs.fp[6].high, vcpu->regs.fp[6].low, vcpu->regs.fp[7].high, vcpu->regs.fp[7].low);
+  dlog_error("  V8 0x%016lx %016lx   V9 0x%016lx %016lx\n", vcpu->regs.fp[8].high, vcpu->regs.fp[8].low, vcpu->regs.fp[9].high, vcpu->regs.fp[9].low);
+  dlog_error(" V10 0x%016lx %016lx  V11 0x%016lx %016lx\n", vcpu->regs.fp[10].high, vcpu->regs.fp[10].low, vcpu->regs.fp[11].high, vcpu->regs.fp[11].low);
+  dlog_error(" V12 0x%016lx %016lx  V13 0x%016lx %016lx\n", vcpu->regs.fp[12].high, vcpu->regs.fp[12].low, vcpu->regs.fp[13].high, vcpu->regs.fp[13].low);
+  dlog_error(" V14 0x%016lx %016lx  V15 0x%016lx %016lx\n", vcpu->regs.fp[14].high, vcpu->regs.fp[14].low, vcpu->regs.fp[15].high, vcpu->regs.fp[15].low);
+  dlog_error(" V16 0x%016lx %016lx  V17 0x%016lx %016lx\n", vcpu->regs.fp[16].high, vcpu->regs.fp[16].low, vcpu->regs.fp[17].high, vcpu->regs.fp[17].low);
+  dlog_error(" V18 0x%016lx %016lx  V19 0x%016lx %016lx\n", vcpu->regs.fp[18].high, vcpu->regs.fp[18].low, vcpu->regs.fp[19].high, vcpu->regs.fp[19].low);
+  dlog_error(" V20 0x%016lx %016lx  V21 0x%016lx %016lx\n", vcpu->regs.fp[20].high, vcpu->regs.fp[20].low, vcpu->regs.fp[21].high, vcpu->regs.fp[21].low);
+  dlog_error(" V22 0x%016lx %016lx  V23 0x%016lx %016lx\n", vcpu->regs.fp[22].high, vcpu->regs.fp[22].low, vcpu->regs.fp[23].high, vcpu->regs.fp[23].low);
+  dlog_error(" V24 0x%016lx %016lx  V25 0x%016lx %016lx\n", vcpu->regs.fp[24].high, vcpu->regs.fp[24].low, vcpu->regs.fp[25].high, vcpu->regs.fp[25].low);
+  dlog_error(" V26 0x%016lx %016lx  V27 0x%016lx %016lx\n", vcpu->regs.fp[26].high, vcpu->regs.fp[26].low, vcpu->regs.fp[27].high, vcpu->regs.fp[27].low);
+  dlog_error(" V28 0x%016lx %016lx  V29 0x%016lx %016lx\n", vcpu->regs.fp[28].high, vcpu->regs.fp[28].low, vcpu->regs.fp[29].high, vcpu->regs.fp[29].low);
+  dlog_error(" V30 0x%016lx %016lx  V31 0x%016lx %016lx\n", vcpu->regs.fp[30].high, vcpu->regs.fp[30].low, vcpu->regs.fp[31].high, vcpu->regs.fp[31].low);
+
+	dlog_error("\n");
+  dlog_error("  SP 0x%016lx  ELR 0x%016lx  SPSR 0x%08lx  FPSR 0x%08lx\n ESR 0x%08lx          FAR 0x%016lx\n", vcpu->regs.lazy.sp_el0, vcpu->regs.lazy.elr_el1, vcpu->regs.spsr, vcpu->regs.fpsr, esr, vcpu->regs.lazy.far_el1);
+
+	dlog_error("\n");
+	dlog_error(" ESR : EC 0x%02lx  IL 0x%lx  ISS 0x%08lx\n", (esr & 0xFC000000) >> 26, (esr >> 25) & 0x1, esr & 0x1FFFFFF);
+
+	describe_exception_syndrome (esr);   // MU_CHANGE - ARM64 VS change
+
+	dlog_error("\n");
+  dlog_error("Stack dump:\n");
+  for (Offset = -256; Offset < 256; Offset += 32) {
+    dlog_error(
+      "%c %013lx: %016lx %016lx %016lx %016lx\n",
+      Offset == 0 ? '>' : ' ',
+      vcpu->regs.lazy.sp_el0 + Offset,
+      *(uint64_t *)(vcpu->regs.lazy.sp_el0 + Offset),
+      *(uint64_t *)(vcpu->regs.lazy.sp_el0 + Offset + 8),
+      *(uint64_t *)(vcpu->regs.lazy.sp_el0 + Offset + 16),
+      *(uint64_t *)(vcpu->regs.lazy.sp_el0 + Offset + 24)
+      );
+  }
+}
+// MU_CHANGE Ends
+
 /**
  * Initialises a fault info structure. It assumes that an FnV bit exists at
  * bit offset 10 of the ESR, and that it is only valid when the bottom 6 bits of
@@ -1248,6 +1429,8 @@ static struct vcpu_fault_info fault_info_init(uintreg_t esr,
 	struct vcpu_fault_info r;
 	uint64_t hpfar_el2_val;
 	uint64_t hpfar_el2_fipa;
+
+	better_lower_exception_dumper(esr, vcpu);  // MU_CHANGE
 
 	r.mode = mode;
 	r.pc = va_init(vcpu->regs.pc);
