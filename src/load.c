@@ -544,6 +544,8 @@ static bool ffa_map_memory_regions(const struct manifest_vm *manifest_vm,
 	uint32_t map_mode;
 	uint32_t attributes;
 
+	dlog_verbose("is_el0_partition: %d\n", is_el0_partition);
+
 	/* Map memory-regions */
 	while (j < manifest_vm->partition.mem_region_count) {
 		struct memory_region mem_region;
@@ -605,8 +607,8 @@ static bool ffa_map_memory_regions(const struct manifest_vm *manifest_vm,
 			return false;
 		}
 
-		dlog_verbose("Memory region %#lx - %#lx allocated.\n",
-			     pa_addr(region_begin), pa_addr(region_end));
+		dlog_verbose("Memory region %#lx - %#lx allocated. (0x%x)\n",
+			     pa_addr(region_begin), pa_addr(region_end), map_mode);
 
 		j++;
 	}
@@ -648,6 +650,10 @@ static bool ffa_map_memory_regions(const struct manifest_vm *manifest_vm,
 				"region from primary VM.\n");
 			return false;
 		}
+
+		dlog_verbose("Device region %lx - %lx allocated. (0x%x)\n",
+			     pa_addr(region_begin), pa_addr(region_end), map_mode);
+
 		j++;
 	}
 	return true;
@@ -803,7 +809,7 @@ static bool load_secondary(struct mm_stage1_locked stage1_locked,
 	}
 
 	dlog_info("Loaded with %u vCPUs, entry at %#lx.\n",
-		  manifest_vm->secondary.vcpu_count, pa_addr(mem_begin));
+		  manifest_vm->secondary.vcpu_count, ipa_addr(secondary_entry));
 
 	vcpu = vm_get_vcpu(vm, 0);
 

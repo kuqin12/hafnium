@@ -1006,10 +1006,11 @@ static void inject_el1_sysreg_trap_exception(struct vcpu *vcpu,
 	char *direction_str = ISS_IS_READ(esr_el2) ? "read" : "write";
 
 	dlog_notice(
-		"Trapped access to system register %s: op0=%lu, op1=%lu, "
+		"Trapped access to system register %s @ %lx: op0=%lu, op1=%lu, "
 		"crn=%lu, "
 		"crm=%lu, op2=%lu, rt=%lu.\n",
-		direction_str, GET_ISS_OP0(esr_el2), GET_ISS_OP1(esr_el2),
+		direction_str, vcpu->regs.pc,
+		GET_ISS_OP0(esr_el2), GET_ISS_OP1(esr_el2),
 		GET_ISS_CRN(esr_el2), GET_ISS_CRM(esr_el2),
 		GET_ISS_OP2(esr_el2), GET_ISS_RT(esr_el2));
 
@@ -1291,7 +1292,7 @@ struct vcpu *sync_lower_exception(uintreg_t esr, uintreg_t far)
 
 		resume = vcpu_handle_page_fault(vcpu, &info);
 		if (is_el0_partition) {
-			dlog_warning("Data abort on EL0 partition\n");
+			dlog_warning("Data abort on EL0 partition @ 0x%lx\n", vcpu->regs.pc);
 			/*
 			 * Abort EL0 context if we should not resume the
 			 * context, or it is an alignment fault.

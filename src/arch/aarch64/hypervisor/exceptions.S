@@ -678,8 +678,8 @@ other_world_loop:
 
 vhe_timer_restore:
 	ldp x24, x25, [x2]
-	msr cntv_cval_el02, x24
-	msr cntv_ctl_el02, x25
+	msr CNTV_CVAL_EL0, x24
+	msr CNTV_CTL_EL0, x25
 
 restore_sys_regs:
 	/* Restore 'other world VM' EL1 registers. */
@@ -773,8 +773,8 @@ restore_sys_regs:
 	b handle_smc_from_nwd
 
 vhe_timer_save:
-	mrs x24, cntv_cval_el02
-	mrs x25, cntv_ctl_el02
+	mrs x24, CNTV_CVAL_EL0
+	mrs x25, CNTV_CTL_EL0
 
 handle_smc_from_nwd:
 	stp x24, x25, [x2]
