@@ -1418,7 +1418,7 @@ enum manifest_return_code parse_ffa_manifest(
 	}
 
 	/* Parse boot info node. */
-	if (boot_info_node != NULL) {
+	if (boot_info_node != NULL && vm->partition.ffa_version >= FFA_VERSION_1_1){
 		ffa_node = root;
 		vm->partition.boot_info =
 			fdt_find_child(&ffa_node, &boot_info_node_name);
@@ -1552,7 +1552,7 @@ static enum manifest_return_code parse_ffa_partition_package(
 				"space.\n",
 				vm->debug_name.data);
 		} else {
-			if (!ffa_boot_info_node(&boot_info_node, &pkg)) {
+			if (!ffa_boot_info_node(&boot_info_node, &pkg, vm->partition.ffa_version)) {
 				dlog_error(
 					"Failed to process boot "
 					"information.\n");
